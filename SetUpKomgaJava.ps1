@@ -1,4 +1,4 @@
-﻿############################################################################################################
+############################################################################################################
 # This script will automatically download:                                                                 #
 #     • Java (Adoptium Temurin 17)                                                                         #
 #     • NSSM (Non Sucky Service Manager                                                                    #
@@ -37,12 +37,19 @@ $javaArguments = "-jar -Xmx4g"
 # The name of the backup directory - this will hold the current version of komga and two older versions as backup, just in case
 $backupDIR = "previous_versions"
 
+# Stop the Komga service if it exists
+If ( Get-Service -Name "$serviceName" -ErrorAction 'SilentlyContinue' )
+{
+    Stop-Service "$serviceName"
+}
+
+
 ################################
 # Adoptium Temurin 17 LTS Java #
 ################################
 # Java file pattern, download URI, and local save path for the zip file
-$assetPattern = "OpenJDK17U-jre_x64_windows_hotspot_17.0.2_8.zip"
-$downloadURI = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.2%2B8/$assetPattern"
+$assetPattern = "OpenJDK17U-jre_x64_windows_hotspot_17.0.3_7.zip"
+$downloadURI = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.3%2B7/OpenJDK17U-jre_x64_windows_hotspot_17.0.3_7.zip"
 $localZip = ( Join-Path -Path "$runDIR" -ChildPath $assetPattern )
 
 # Make sure that the running directory exists, or create it
@@ -50,6 +57,13 @@ If ( !( Test-Path -Path "$runDIR" ) )
 { 
    Write-Host Creating directory $runDIR
    New-Item -Path "$runDIR" -ItemType Directory 
+}
+
+# Delete the java folder if it exists already
+If ( Test-Path -Path "$runDIR\jdk*" )
+{
+    Write-Host Deleting existing java folder
+    Remove-Item "$runDIR\jdk*.*" -Recurse -Force
 }
 
 # Download the Java zip file, extract it, delete it, and capture the name of the folder that is extracted
@@ -70,6 +84,10 @@ $backupDIR = ( Join-Path -Path $runDIR -ChildPath $backupDIR )
 If ( !( Test-Path -Path "$backupDIR" ) ) { New-Item -Path "$backupDIR" -ItemType Directory }
 
 # Download code for komga, grab the latest release
+If ( Test-Path -Path "$runDIR\komga.jar" )
+{
+    Remove-Item "$runDIR\komga.jar"
+}
 $repoName = "gotson/komga"
 $assetPattern = "komga-*.jar"
 $releasesURI = "https://api.github.com/repos/$repoName/releases/latest"
@@ -81,6 +99,16 @@ Start-BitsTransfer -Source "$downloadURI" -Destination "$runDIR"
 # Make a copy of the jar file, just in case, and then rename it
 Copy-Item -Path ( Join-Path -Path $runDIR -ChildPath "$assetPattern" ) -Destination "$backupDIR"
 Get-ChildItem -Path ( Join-Path -Path $runDIR -ChildPath $assetPattern ) | Rename-Item -NewName "komga.jar"
+
+# Delete the files if they already exist
+If ( Test-Path -Path ( Join-Path -Path "$runDIR" -ChildPath "UpdateKomga.ps1" ) )
+{
+    Remove-Item -Path ( Join-Path -Path "$runDIR" -ChildPath "UpdateKomga.ps1" )
+}
+If ( Test-Path -Path ( Join-Path -Path "$runDIR" -ChildPath "KomgaService.bat" ) )
+{
+    Remove-Item -Path ( Join-Path -Path "$runDIR" -ChildPath "KomgaService.bat" )
+}
 
 # Create the PowerShell scripts that will be used to run and update komga
 New-Item -ItemType File -Path ( Join-Path -Path "$runDIR" -ChildPath "UpdateKomga.ps1" )
@@ -154,22 +182,29 @@ $scheduledTaskObject.Connect()
 If ( Get-ScheduledTask -TaskName "Update Komga" -EA 0 ) { Unregister-ScheduledTask -TaskName "Update Komga" -Confirm:$false }
 $UpdateKomgaPS1 = ( Join-Path -Path "$runDIR" -ChildPath "UpdateKomga.ps1" )
 $action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-ExecutionPolicy ByPass -NoProfile -File $UpdateKomgaPS1"
-Register-ScheduledTask -Action $action -TaskName "Update Komga" -Description "Check for komga updates" 
+Register-ScheduledTask -Action $action -TaskName "Update Komga" -Description "Check for komga updates" -ErrorAction 'SilentlyContinue'
 
-# Build a shortcut to the scheduled task
-$TargetPath = "C:\Windows\System32\schtasks.exe"
-$Arguemnts = '/run /tn "Update Komga"'
-$Destination = ( Join-Path -Path "$runDir" -ChildPath "Check For Updates.lnk" )
+If ( !( Test-Path "$runDIR\Check For Updates.lnk" ) )
+{
+    # Build a shortcut to the scheduled task
+    $TargetPath = "C:\Windows\System32\schtasks.exe"
+    $Arguemnts = '/run /tn "Update Komga"'
+    $Destination = ( Join-Path -Path "$runDir" -ChildPath "Check For Updates.lnk" )
 
-$Shell = New-Object -ComObject WScript.Shell
-$Shortcut = $Shell.CreateShortcut( "$Destination" )
-$Shortcut.TargetPath = $TargetPath
-$Shortcut.Arguments = $Arguemnts
-$Shortcut.Save()
+    $Shell = New-Object -ComObject WScript.Shell
+    $Shortcut = $Shell.CreateShortcut( "$Destination" )
+    $Shortcut.TargetPath = $TargetPath
+    $Shortcut.Arguments = $Arguemnts
+    $Shortcut.Save()
+}
 
 ########
 # NSSM #
 ########
+
+# Check if NSSM already exists... if it does, this script has probably already been run before. 
+If ( !( Test-Path -Path "$runDIR\nssm" ) )
+{
 # Put together the user credentials needed for NSSM
 Write-Host Credentials are required for the NSSM service
 $username = "$env:USERDOMAIN\$env:USERNAME"
@@ -255,6 +290,8 @@ $nssmBatch = ( Join-Path -Path "$runDIR" -ChildPath "nssm.bat" )
 # Start the batch file as admin
 Write-Host Setting up NSSM...
 Start-Process cmd.exe -ArgumentList "/C $nssmBatch" -Wait -WindowStyle Hidden -Verb RunAs
+}
+
 
 # Hey, we made it... Start the service, and we're good to go
 Write-Host Starting the service... Give Komga some time to start up, and then access your browser at http://localhost:8080/

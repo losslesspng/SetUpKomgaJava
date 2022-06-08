@@ -19,6 +19,8 @@ This script is all you need to do the following:
 Please read the instructions in the big 'ol comment block at the top of the script, but I'll quickly spell it out here for you:
 You can run this script as provided, no edits necessary, and it should work. It has a "Works on my machine" badge, but you can find me here or on the Komga discord server if you run into trouble.
 
+### *** IMPORTANT *** If you're running a Microsoft Account, please check out the [Wiki article](https://github.com/losslesspng/SetUpKomgaJava/wiki/Running-With-a-Microsoft-Account)! 
+
 The script should do a good job at keeping itself organized, but you can easily change the directory it gets set up in, the name of the rolling backup folder for komga versions (it keeps the latest 3 versions that you've run, in case something goes wrong and you need to revert), the name of the service that runs komga, and the arguments that get passed to java as it runs. The only default arguement runs komga at 4gb of ram. 
 
 ### You do not need to run this script as administrator, but you **do** need to have an admin account to setup NSSM

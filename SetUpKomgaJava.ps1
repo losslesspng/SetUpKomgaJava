@@ -299,4 +299,4 @@ Start-Service -Name "$serviceName"
 
 Write-Host This script will automatically launch the web UI in 30 seconds, or you can close it and launch it yourself.
 Timeout /T 30
-Start-Process "http://localhost:8080"
+Start-Process "http://localhost:25600"

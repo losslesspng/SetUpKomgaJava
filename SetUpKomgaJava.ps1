@@ -294,7 +294,7 @@ Start-Process cmd.exe -ArgumentList "/C $nssmBatch" -Wait -WindowStyle Hidden -V
 
 
 # Hey, we made it... Start the service, and we're good to go
-Write-Host Starting the service... Give Komga some time to start up, and then access your browser at http://localhost:8080/
+Write-Host Starting the service... Give Komga some time to start up, and then access your browser at http://localhost:25600/
 Start-Service -Name "$serviceName"
 
 Write-Host This script will automatically launch the web UI in 30 seconds, or you can close it and launch it yourself.

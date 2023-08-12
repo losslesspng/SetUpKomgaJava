@@ -96,7 +96,7 @@ Set-Content -Path "~\.komga\setup-service.ps1" -Value $KomgaServicePS1
 Set-Content -Path "~\.komga\application.yml" -Value $ApplicationYML
 
 # Run the script to make the service, this requires an admin prompt. 
-Start-Process Powershell.exe -Verb RunAs -ExecutionPolicy Bypass -NoProfile -File "~\.komga\setup-service.ps1" -Wait
+Start-Process Powershell.exe -Verb RunAs "~\.komga\setup-service.ps1" -Wait
 Remove-Item -Path "~\.komga\setup-service.ps1"
 
 # Hey, we made it... Start the service, and we're good to go
